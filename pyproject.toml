@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "primeclips"
+version = "0.1.0"
+description = "Real-time live stream clipper: replay buffer, hype detection, 9:16 shorts, captions, auto-publish."
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "Debangan Ghosh" }]
+requires-python = ">=3.10"
+keywords = ["clipping", "twitch", "youtube", "kick", "shorts", "streaming", "ffmpeg", "highlights"]
+dependencies = ["fastapi>=0.110", "uvicorn>=0.29", "streamlink>=6.0", "yt-dlp>=2024.1.0"]
+
+[project.optional-dependencies]
+captions = ["faster-whisper>=1.0"]
+youtube-chat = ["chat-downloader>=0.2.8"]
+upload = ["google-api-python-client>=2.0", "google-auth-oauthlib>=1.0"]
+all = ["faster-whisper>=1.0", "chat-downloader>=0.2.8", "google-api-python-client>=2.0", "google-auth-oauthlib>=1.0"]
+
+[project.urls]
+Homepage = "https://github.com/debanganghosh08/Prime_Clips"
+Instagram = "https://www.instagram.com/primus.builds/"
+
+[project.scripts]
+primeclips = "primeclips.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["primeclips*"]
+
+[tool.setuptools.package-data]
+primeclips = ["web/*"]

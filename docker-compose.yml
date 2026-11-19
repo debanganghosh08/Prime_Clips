@@ -1,0 +1,18 @@
+services:
+  primeclips:
+    build:
+      context: .
+      args:
+        # Optional extras: "", captions, youtube-chat, upload, or all
+        EXTRAS: ""
+    image: primeclips
+    ports:
+      # Bound to localhost on purpose: the dashboard has no login.
+      # Use "8765:8765" only on a trusted network.
+      - "127.0.0.1:8765:8765"
+    volumes:
+      - ./data:/data
+    env_file:
+      - path: .env
+        required: false
+    restart: unless-stopped
