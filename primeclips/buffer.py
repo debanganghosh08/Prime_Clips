@@ -7,6 +7,7 @@ from a 1080p60 stream takes well under a second and costs almost no CPU."""
 from __future__ import annotations
 
 import logging
+import shutil
 import subprocess
 import threading
 import time
@@ -87,6 +88,15 @@ class ReplayBuffer:
                     p.kill()
                 except Exception:
                     pass
+
+    def cleanup_when_idle(self, timeout: float = 120.0) -> None:
+        """Delete the segment folder once no pending cut still needs it."""
+        def _go() -> None:
+            deadline = time.time() + timeout
+            while self._pins and time.time() < deadline:
+                time.sleep(1)
+            shutil.rmtree(self.dir, ignore_errors=True)
+        threading.Thread(target=_go, daemon=True).start()
 
     @property
     def running(self) -> bool:

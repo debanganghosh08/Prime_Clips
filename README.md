@@ -54,7 +54,9 @@ Prime Clips sits on the live stream with a replay buffer, so the clip already ex
 | 🖥️ | **Terminal mode** | `primeclips live <url>`, press Enter to clip. |
 | 🐳 | **Docker** | `docker compose up`. |
 
-> 🧪 **Experimental:** YouTube upload, LLM moment picking (VOD `--ai`) and YouTube live chat have not been tested end-to-end. Everything else is the core path.
+> ✅ **Tested end-to-end:** Twitch live ingest via streamlink + Twitch chat, local file input, replay buffer, auto and manual clips, the `vertical-blur` / `crop` / `gaming` / `landscape` layouts, GPU encoding (Intel QSV), VOD mode, terminal mode and the dashboard.
+>
+> 🧪 **Not tested yet (experimental):** YouTube live ingest + chat, Kick, burned-in captions, AI titles, LLM moment picking (VOD `--ai`), Discord webhook, YouTube upload and Docker. Issues and PRs are very welcome!
 
 Chat signal support today: **Twitch** (anonymous IRC, no account or API key) and **YouTube** (experimental, needs the `youtube-chat` extra). Other platforms fall back to audio-only detection.
 
@@ -160,7 +162,7 @@ docker compose up
 
 Then open http://localhost:8765. Clips land in `./data/clips/`.
 
-> 🔒 The dashboard has no login and allows any CORS origin. Keep it on `localhost` or a trusted network, do not expose it to the internet.
+> 🔒 The dashboard has no login. Keep it on `localhost` or a trusted network, do not expose it to the internet.
 
 ---
 

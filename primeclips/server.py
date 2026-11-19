@@ -8,7 +8,6 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import Body, FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
 
 from .config import Config
@@ -25,8 +24,9 @@ def create_app(cfg: Config) -> FastAPI:
         yield
         core.shutdown()
 
+    # No CORS middleware on purpose: the dashboard is same-origin, and a wildcard would let
+    # any website you visit drive this local service.
     api = FastAPI(title="Prime Clips", docs_url="/api/docs", lifespan=lifespan)
-    api.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
     api.state.core = core
 
     def session(sid: str):

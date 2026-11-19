@@ -221,6 +221,8 @@ class LiveSession:
             self.app.bus.emit("session", session=self.to_api())
         if self.chat:
             self.chat.stop()
+        if self.buffer:
+            self.buffer.cleanup_when_idle()
 
     def stop(self) -> None:
         if self.state in ("stopped", "error"):
@@ -232,6 +234,7 @@ class LiveSession:
             self.chat.stop()
         if self.buffer:
             self.buffer.stop()
+            self.buffer.cleanup_when_idle()
         self.state = "stopped"
         self.app.bus.emit("session", session=self.to_api())
 
@@ -288,6 +291,9 @@ class App:
         self.cfg = cfg
         self.bus = EventBus()
         logging.getLogger("primeclips").addHandler(_BusLogHandler(self.bus))
+        # replay buffers are scratch space: drop leftovers from a previous run / crash
+        for old in cfg.buffers_dir.iterdir():
+            shutil.rmtree(old, ignore_errors=True)
         self.library = Library(cfg, self.bus)
         self.worker = Worker()
         self.worker.start()
