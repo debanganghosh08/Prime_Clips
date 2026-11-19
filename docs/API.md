@@ -50,7 +50,7 @@ Base URL: `http://localhost:8765` (change with `--port`). All bodies are JSON.
 | POST | `/api/live/{sid}/stop` | | `Session` |
 | POST | `/api/live/{sid}/clip` | `{seconds?: 30, layout?}` clips the last N seconds | `Clip` |
 | POST | `/api/clip` | `{seconds?: 30}` clips the most recent live session (Stream Deck / hotkey friendly) | `Clip` |
-| POST | `/api/vod` | `{url, top_n?: 5, layout?, captions?, min_len?: 20, max_len?: 45, ai?: false}` url can be a local path; `ai` lets the LLM pick moments from the transcript (experimental) | `Job` |
+| POST | `/api/vod` | `{url, top_n?: 5, layout?, captions?, min_len?: 20, max_len?: 45, ai?: false, delete_source?: false}` url can be a local path; `delete_source` removes the downloaded VOD after cutting; `ai` lets the LLM pick moments from the transcript (experimental) | `Job` |
 | GET | `/api/clips` | newest first | `[Clip]` |
 | GET | `/api/clips/{id}` | | `Clip` |
 | GET | `/api/clips/{id}/file/{raw\|vertical\|thumb}` | supports Range for video | file |

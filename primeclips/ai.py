@@ -59,19 +59,34 @@ def pick_moments(cfg: Config, segments: list[tuple[float, float, str]], n: int,
     try:
         out = complete(cfg,
                        "You are a viral short-form editor for gaming streams. Find the moments most "
-                       "likely to go viral: funny, shocking, rage, clutch plays, hot takes. "
-                       "Reply ONLY with JSON: [{\"start\": sec, \"end\": sec, \"title\": str, \"score\": 0-100}].",
+                       "likely to go viral: funny, shocking, rage, clutch plays, hot takes. Rules: use the "
+                       "exact transcript timestamps; one contiguous span per clip (no stitching); start on a "
+                       "line that makes sense without context; end right after the payoff/punchline. "
+                       "Score each clip on four 0-25 criteria: hook (first 3 s grab attention), engagement "
+                       "(emotion/energy), value (funny/shocking/skillful), shareability (people send it to friends). "
+                       "Reply ONLY with JSON: [{\"start\": sec, \"end\": sec, \"title\": str, \"hook\": n, "
+                       "\"engagement\": n, \"value\": n, \"shareability\": n}].",
                        f"Pick the {n} best moments, each {min_len:.0f}-{max_len:.0f} seconds long.\n"
-                       f"Transcript with [start-end] seconds:\n{lines}", max_tokens=1200, timeout=120)
+                       f"Transcript with [start-end] seconds:\n{lines}", max_tokens=1500, timeout=120)
         m = re.search(r"\[.*\]", out, re.S)
         items = json.loads(m.group(0)) if m else []
+        last = segments[-1][1]
         res = []
         for it in items:
-            s, e = float(it["start"]), float(it["end"])
+            try:
+                s, e = float(it["start"]), float(it["end"])
+            except (KeyError, TypeError, ValueError):
+                continue
+            if not 0 <= s < last:
+                continue  # hallucinated timestamp
             if e - s < min_len:
                 e = s + min_len
-            res.append({"start": s, "end": min(e, s + max_len), "title": str(it.get("title", ""))[:90],
-                        "score": float(it.get("score", 50))})
+            # the score is summed here from the rubric, never trusted as a single model number
+            score = sum(max(0.0, min(25.0, float(it.get(k, 12) or 0)))
+                        for k in ("hook", "engagement", "value", "shareability"))
+            res.append({"start": s, "end": min(e, s + max_len, last), "title": str(it.get("title", ""))[:90],
+                        "score": round(score, 1)})
+        res.sort(key=lambda r: r["score"], reverse=True)
         return res[:n]
     except Exception as e:
         log.warning("LLM moment picking failed: %s", e)

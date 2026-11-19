@@ -59,6 +59,9 @@ YouTube is rate-limiting your IP. Wait 10–30 minutes, use cookies (above), and
 ### 🐢 VOD downloads are huge or slow
 Download 720p instead of 1080p: `PRIMECLIPS_VOD_MAX_HEIGHT=720`. Shorts are 1080 px wide anyway, and 720p roughly halves the download.
 
+### ❌ Still blocked even with cookies (rare)
+YouTube sometimes also wants a "PO token". yt-dlp supports token-provider plugins; follow the official [PO Token Guide](https://github.com/yt-dlp/yt-dlp/wiki/PO-Token-Guide). Also, don't run many downloads in parallel from one IP.
+
 ### 🔄 Anything else YouTube-related
 `pip install -U "yt-dlp[default]"`. YouTube changes often, and yt-dlp releases fixes within days.
 
@@ -108,6 +111,8 @@ PRIMECLIPS_FACECAM=0,0,0.28,0.30         # top-left (default)
 ```
 
 ### Captions don't appear
+- Log says `cublas64_12.dll is not found` (or cuDNN): your NVIDIA GPU is there but the CUDA libraries aren't. Prime Clips detects this and uses the CPU automatically; force it with `PRIMECLIPS_WHISPER_DEVICE=cpu`.
+- Log says `unexpected keyword argument 'metadata_errors'`: an old PyAV. Fixed in Prime Clips (audio is decoded with ffmpeg); update with `git pull`.
 - `pip install faster-whisper`, then turn captions on per session (`--captions`).
 - The first run downloads the Whisper model, so give it a minute.
 - Docker/Linux: a font must exist (the Docker image installs DejaVu).
@@ -134,6 +139,8 @@ PRIMECLIPS_FACECAM=0,0,0.28,0.30         # top-left (default)
 ---
 
 ## 💾 Disk space
+- **Downloaded VODs** go to `data/downloads/` (a 35-min 720p stream is about 700 MB). Pass `--delete-source` to `primeclips vod` to delete the download as soon as the clips are cut.
+- **`primeclips clean`** deletes downloads and leftover buffers. **`primeclips clean --all`** deletes the finished clips too.
 - Replay buffers live in `data/buffers/` and are deleted automatically when a session stops (and on startup).
 - Finished clips live in `data/clips/`. Delete them from the dashboard or the folder.
 - Shrink the rolling window with `PRIMECLIPS_BUFFER_MINUTES=5`.

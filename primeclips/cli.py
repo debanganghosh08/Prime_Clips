@@ -117,7 +117,8 @@ def cmd_vod(a, cfg) -> None:
     core = App(cfg)
     print(BANNER.format(v=__version__))
     job = core.start_vod(a.url, top_n=a.top, layout=a.layout, captions_on=a.captions,
-                         min_len=a.min_len, max_len=a.max_len, ai_pick=a.ai)
+                         min_len=a.min_len, max_len=a.max_len, ai_pick=a.ai,
+                         delete_source=a.delete_source)
     stop = threading.Event()
     threading.Thread(target=_print_events, args=(core, stop), daemon=True).start()
     last = ""
@@ -133,6 +134,19 @@ def cmd_vod(a, cfg) -> None:
         time.sleep(0.5)
     stop.set()
     print(f"\n  ✅ {len(job['clip_ids'])} clips in {cfg.clips_dir}")
+
+
+def cmd_clean(a, cfg) -> None:
+    """Free disk space. Default: downloaded VODs + leftover replay buffers. Clips are kept
+    unless --clips / --all is passed."""
+    import shutil
+    targets = [cfg.downloads_dir, cfg.buffers_dir] + ([cfg.clips_dir] if (a.clips or a.all) else [])
+    freed = 0
+    for d in targets:
+        for p in d.glob("*"):
+            freed += sum(f.stat().st_size for f in ([p] if p.is_file() else p.rglob("*")) if f.is_file())
+            shutil.rmtree(p, ignore_errors=True) if p.is_dir() else p.unlink(missing_ok=True)
+    print(f"  🧹 freed {freed / 1e6:.1f} MB from: " + ", ".join(str(d) for d in targets))
 
 
 def cmd_doctor(a, cfg) -> None:
@@ -178,11 +192,16 @@ def main(argv: list[str] | None = None) -> None:
     vp.add_argument("--ai", action="store_true", help="let the LLM pick moments from the transcript")
     vp.add_argument("--min-len", type=float, default=20)
     vp.add_argument("--max-len", type=float, default=45)
+    vp.add_argument("--delete-source", action="store_true",
+                    help="delete the downloaded VOD once the clips are cut")
     sub.add_parser("doctor", help="check dependencies")
+    cp = sub.add_parser("clean", help="delete downloaded VODs and leftover buffers (clips are kept)")
+    cp.add_argument("--clips", action="store_true", help="also delete all finished clips")
+    cp.add_argument("--all", action="store_true", help="downloads + buffers + clips")
     a = p.parse_args(argv)
     logging.basicConfig(level=logging.DEBUG if a.verbose else logging.WARNING,
                         format="%(asctime)s %(name)s %(levelname)s %(message)s")
     logging.getLogger("primeclips").setLevel(logging.DEBUG if a.verbose else logging.INFO)
     cfg = load_config()
-    {"serve": cmd_serve, "live": cmd_live, "vod": cmd_vod, "doctor": cmd_doctor}.get(
+    {"serve": cmd_serve, "live": cmd_live, "vod": cmd_vod, "doctor": cmd_doctor, "clean": cmd_clean}.get(
         a.cmd or "serve", cmd_serve)(a if a.cmd else p.parse_args(["serve"]), cfg)

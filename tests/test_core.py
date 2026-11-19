@@ -49,12 +49,21 @@ def test_loudness_moments_finds_peaks():
 
 
 def test_filter_graphs_are_well_formed():
-    for layout in ("vertical-blur", "crop", "gaming", "landscape"):
+    for layout in ("vertical-blur", "streamer", "gaming", "crop", "landscape"):
         g = filter_graph(layout, "captions.ass")
-        assert g.endswith("[v]") and "subtitles=f=captions.ass" in g
+        assert g.endswith("[v]") and "subtitles=f=captions.ass" in g and "setpts=PTS-STARTPTS" in g
 
 
 def test_ass_writer(tmp_path: Path):
-    out = write_ass([(0.0, 0.4, "no"), (0.4, 0.8, "way"), (0.9, 1.3, "bro")], tmp_path / "c.ass")
+    out = write_ass([(0.0, 0.4, "no"), (0.4, 0.8, "way"), (0.9, 1.3, "bro")], tmp_path / "c.ass", pos=(540, 825))
     text = out.read_text(encoding="utf-8")
-    assert text.count("Dialogue:") == 3 and "WAY" in text
+    assert text.count("Dialogue:") == 3 and "WAY" in text and r"\pos(540,825)" in text and r"\t(0,140" in text
+
+
+def test_spread_spacing():
+    levels = [-40.0] * 1000
+    for c in (100, 140, 600):
+        for i in range(c, c + 4):
+            levels[i] = -5.0
+    peaks = sorted(int(p) for p, _ in loudness_moments(levels, 3, 30, spacing=200))
+    assert len(peaks) >= 2 and all(b - a >= 200 for a, b in zip(peaks, peaks[1:]))

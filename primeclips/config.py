@@ -6,7 +6,7 @@ import os
 from dataclasses import dataclass, field, asdict
 from pathlib import Path
 
-LAYOUTS = ["vertical-blur", "crop", "gaming", "landscape"]
+LAYOUTS = ["vertical-blur", "streamer", "gaming", "crop", "landscape"]
 
 
 def _load_dotenv(path: Path) -> None:

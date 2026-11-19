@@ -39,8 +39,11 @@ def download(app: "App", url: str) -> tuple[Path, str]:
     return Path(path), channel.strip()
 
 
-def loudness_moments(levels: list[float], n: int, length: float) -> list[tuple[float, float]]:
-    """Return [(peak_time, z_score)], the n strongest loudness peaks spaced >= length apart."""
+def loudness_moments(levels: list[float], n: int, length: float,
+                     spacing: float | None = None) -> list[tuple[float, float]]:
+    """Return [(peak_time, z_score)], the n strongest loudness peaks spaced >= `spacing`
+    seconds apart (default: one clip length, so clips never overlap)."""
+    length = max(length, spacing or 0)
     if len(levels) < 10:
         return []
     k = 3  # 3 s smoothing
@@ -63,7 +66,8 @@ def loudness_moments(levels: list[float], n: int, length: float) -> list[tuple[f
 
 
 def run_vod(app: "App", job: dict, top_n: int = 5, layout: str | None = None, captions_on: bool = False,
-            min_len: float = 20, max_len: float = 45, ai_pick: bool = False) -> None:
+            min_len: float = 20, max_len: float = 45, ai_pick: bool = False,
+            delete_source: bool = False) -> None:
     cfg = app.cfg
     url = job["url"]
     try:
@@ -82,7 +86,7 @@ def run_vod(app: "App", job: dict, top_n: int = 5, layout: str | None = None, ca
         moments: list[dict] = []
         if ai_pick and ai.enabled(cfg) and captions.available():
             app.update_job(job, message="transcribing + asking the LLM")
-            words = captions.transcribe(path, cfg.whisper_model, cfg.threads)
+            words = captions.transcribe(path, cfg.whisper_model, cfg.threads, cfg.ffmpeg)
             segs, cur = [], []
             for w in words:  # ~10 s transcript chunks
                 cur.append(w)
@@ -93,7 +97,10 @@ def run_vod(app: "App", job: dict, top_n: int = 5, layout: str | None = None, ca
                 segs.append((cur[0][0], cur[-1][1], " ".join(x[2] for x in cur)))
             for m in ai.pick_moments(cfg, segs, top_n, min_len, max_len):
                 moments.append({**m, "reason": "AI pick"})
-        for peak, z in loudness_moments(levels, top_n * 2, length):
+        # Spread picks over the whole VOD so 10 clips = 10 different sections of the stream,
+        # not 10 seconds-apart variations of the single loudest scene.
+        spread = (total / (top_n * 1.6)) if total else length
+        for peak, z in loudness_moments(levels, top_n * 2, length, spacing=spread):
             if len(moments) >= top_n:
                 break
             s = max(0.0, peak - length * 0.7)
@@ -102,6 +109,7 @@ def run_vod(app: "App", job: dict, top_n: int = 5, layout: str | None = None, ca
             moments.append({"start": s, "end": min(total or s + length, s + length), "title": "",
                             "score": round(min(99.0, 50 + z * 12), 1), "reason": "audio peak"})
 
+        moments.sort(key=lambda m: m["start"])  # chronological = easier to review
         app.update_job(job, status="clipping", progress=0.5, message=f"found {len(moments)} moments")
         for i, m in enumerate(moments):
             clip = app.library.new(title=m["title"] or cfg.title_template.format(channel=channel, reason=m["reason"]),
@@ -116,8 +124,11 @@ def run_vod(app: "App", job: dict, top_n: int = 5, layout: str | None = None, ca
             app.worker.submit(lambda c=clip: app.finish(c))
             job["clip_ids"].append(clip.id)
             app.update_job(job, progress=0.5 + 0.5 * (i + 1) / max(1, len(moments)))
-        app.update_job(job, status="done", progress=1.0,
-                       message=f"{len(moments)} clips queued for rendering")
+        msg = f"{len(moments)} clips queued for rendering"
+        if delete_source and not ingest.is_local(url):
+            path.unlink(missing_ok=True)  # cuts are done; renders only need each clip's raw.mp4
+            msg += f" · deleted source {path.name}"
+        app.update_job(job, status="done", progress=1.0, message=msg)
     except Exception as e:
         log.error("VOD job failed: %s", e)
         app.update_job(job, status="error", error=str(e)[:500], message="failed")

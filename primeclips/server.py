@@ -88,7 +88,8 @@ def create_app(cfg: Config) -> FastAPI:
         return core.start_vod(url, top_n=int(body.get("top_n", 5)), layout=body.get("layout"),
                               captions_on=bool(body.get("captions", False)),
                               min_len=float(body.get("min_len", 20)), max_len=float(body.get("max_len", 45)),
-                              ai_pick=bool(body.get("ai", False)))
+                              ai_pick=bool(body.get("ai", False)),
+                              delete_source=bool(body.get("delete_source", False)))
 
     @api.get("/api/clips")
     def clips():

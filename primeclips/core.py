@@ -19,7 +19,7 @@ from .buffer import ReplayBuffer, Segment
 from .chat import start_chat
 from .config import LAYOUTS, Config, SessionSettings
 from .detector import HypeDetector
-from .render import render
+from .render import caption_anchor, render
 
 log = logging.getLogger("primeclips")
 
@@ -378,13 +378,11 @@ class App:
             if clip.captions and captions.available():
                 self.library.save(clip, status="captioning")
                 try:
-                    words = captions.transcribe(raw, cfg.whisper_model, cfg.threads)
+                    words = captions.transcribe(raw, cfg.whisper_model, cfg.threads, cfg.ffmpeg)
                     transcript = " ".join(w[2] for w in words)
                     if words:
-                        vertical = clip.layout != "landscape"
-                        ass = captions.write_ass(words, clip.path(cfg, "ass"),
-                                                 *((1080, 1920) if vertical else (1920, 1080)),
-                                                 margin_v=560 if vertical else 90)
+                        rx, ry, x, y = caption_anchor(clip.layout)
+                        ass = captions.write_ass(words, clip.path(cfg, "ass"), rx, ry, pos=(x, y))
                 except Exception as e:
                     log.warning("captions failed, rendering without: %s", e)
             if clip.layout != "landscape" or ass:

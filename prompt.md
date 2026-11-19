@@ -6,6 +6,31 @@ Works with Claude Code, Antigravity, Cursor, Copilot, ChatGPT, or any coding age
 
 ---
 
+## 🧭 Agent playbook: what to do with whatever the user gives you
+
+| The user gives you... | Do this |
+|---|---|
+| This repo's URL, "clone this" | Clone it, then follow **Prompt 0**: check deps, create a venv, `pip install -e .`, run `primeclips doctor`. |
+| A Twitch / Kick / YouTube **live** URL | `primeclips live <url>` (terminal) or `primeclips serve --open` and paste it in the dashboard. |
+| A YouTube / Twitch **VOD** URL or a local video file | `primeclips vod <url-or-path> --top 5 --layout streamer --delete-source` |
+| "Use the web UI" | `primeclips serve --open` → http://localhost:8765 |
+| "Clean up" / "free space" | `primeclips clean` (downloads + buffers) or `primeclips clean --all` (clips too). Confirm before `--all`. |
+
+**Edge cases to handle without asking the user to debug:**
+- **Python missing or < 3.10:** install Python 3.12 (`winget install Python.Python.3.12` / `brew install python@3.12` / `apt install python3.12-venv`).
+- **ffmpeg missing:** `winget install Gyan.FFmpeg` / `brew install ffmpeg` / `apt install ffmpeg`. Open a new shell so PATH updates, or set `PRIMECLIPS_FFMPEG`.
+- **"not recognized" for `primeclips` / `yt-dlp`:** use `python -m primeclips ...` / `python -m yt_dlp ...`.
+- **YouTube "Sign in to confirm you're not a bot":** ask the user to sign in to YouTube in Firefox and close it, then set `PRIMECLIPS_COOKIES_FROM_BROWSER=firefox`. Chrome users can export `cookies.txt` instead. **Never read, print, upload or commit cookies yourself.**
+- **YouTube "Requested format is not available" / only storyboards:** `pip install -U "yt-dlp[default]"`, and make sure Node.js or Deno is installed.
+- **HTTP 429:** stop retrying, wait 10–30 min, use cookies.
+- **No GPU:** nothing to do; it falls back to libx264 automatically. Suggest `PRIMECLIPS_THREADS=1` on weak laptops.
+- **Low disk / long VODs:** `PRIMECLIPS_VOD_MAX_HEIGHT=720` and `--delete-source`; `primeclips clean` afterwards.
+- **Facecam in the wrong place (`streamer` / `gaming` layouts):** grab one frame (`ffmpeg -ss 10 -i raw.mp4 -frames:v 1 f.png`), look at it, and set `PRIMECLIPS_FACECAM=x,y,w,h` as fractions of the frame.
+- **The user can't install anything at all:** point them to the web options in the README ("No setup? Other ways to clip"), or use **Prompt 11** to run the same pipeline with plain ffmpeg.
+- Full symptom list: [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md).
+
+---
+
 ## 📘 Project brief (source of truth)
 
 **Prime Clips** is a real-time clipper for live streams (Twitch, Kick, YouTube, RTMP/SRT, local files). It keeps a rolling replay buffer, scores "hype" every second, and cuts + renders 9:16 shorts within seconds. Python 3.10+, FFmpeg, FastAPI, and a vanilla-JS dashboard. No build step.
@@ -31,7 +56,7 @@ URL ─► ingest.py (streamlink / yt-dlp / direct) ─► buffer.py (ffmpeg -c 
 | `primeclips/audio.py` | Decodes audio at 8 kHz mono and returns dBFS per window (live segments and whole files). |
 | `primeclips/chat.py` | Chat readers: anonymous Twitch IRC (stdlib), YouTube via `chat-downloader`. |
 | `primeclips/detector.py` | `HypeDetector`: audio z-score + chat-rate z-score + hype-emote ratio + "clip it" asks → score, threshold, cooldown, reason. |
-| `primeclips/render.py` | ffmpeg filter graphs for `vertical-blur`, `crop`, `gaming`, `landscape`; GPU encoder with CPU fallback. |
+| `primeclips/render.py` | ffmpeg filter graphs for `vertical-blur`, `streamer`, `gaming`, `crop`, `landscape`; A/V timestamp reset, -14 LUFS loudness, GPU encoder with CPU fallback, caption anchors per layout. |
 | `primeclips/captions.py` | faster-whisper word timestamps → animated ASS subtitles. |
 | `primeclips/ai.py` | OpenAI-compatible chat calls (stdlib HTTP): titles, VOD moment picking. |
 | `primeclips/publish.py` | Discord webhook (stdlib multipart), YouTube Shorts upload (Google API). |
@@ -39,7 +64,7 @@ URL ─► ingest.py (streamlink / yt-dlp / direct) ─► buffer.py (ffmpeg -c 
 | `primeclips/core.py` | `App` (sessions, jobs, publish), `LiveSession`, `Library` (clips on disk as `meta.json`), `Worker`, `EventBus`. |
 | `primeclips/server.py` | FastAPI routes + Server-Sent Events. The contract is in `docs/API.md`. |
 | `primeclips/web/index.html` | The whole dashboard: one file, inline CSS + vanilla JS, no CDN. |
-| `primeclips/cli.py` | `serve`, `live`, `vod`, `doctor`. |
+| `primeclips/cli.py` | `serve`, `live`, `vod` (`--delete-source`), `doctor`, `clean`. |
 | `tests/test_core.py` | Fast tests, no ffmpeg/network: `python -m pytest -q`. |
 
 ### Rules the code follows (keep them when changing things)
@@ -58,6 +83,14 @@ URL ─► ingest.py (streamlink / yt-dlp / direct) ─► buffer.py (ffmpeg -c 
 ---
 
 ## 🧰 Copy-paste prompts
+
+### 0. Clone and run it for me
+```
+Clone https://github.com/debanganghosh08/Prime_Clips and read its prompt.md as the
+source of truth. Set it up on my machine (check Python 3.10+, ffmpeg, Node.js; create
+a venv; pip install -e .; run primeclips doctor) and fix anything missing using the
+"Agent playbook" section. Then start the dashboard with `primeclips serve --open`.
+```
 
 ### 1. First-time setup
 ```
@@ -134,7 +167,45 @@ Twitch URL to the moment a vertical clip is ready, naming the exact functions in
 order. Then tell me the 3 best places to contribute first.
 ```
 
-### 10. Before you open a pull request
+### 10. Clip this video for me
+```
+Read prompt.md. Using Prime Clips, make <N> clips from <URL or file path> with the
+<streamer/gaming/vertical-blur> layout and captions on. Use PRIMECLIPS_VOD_MAX_HEIGHT=720
+and --delete-source. If the facecam ends up in the wrong place, measure it from one frame
+and set PRIMECLIPS_FACECAM, then re-render. Tell me where the clips are.
+```
+
+### 11. No-install fallback: the same pipeline with plain ffmpeg
+Use this only when Prime Clips itself can't be installed (locked-down PC, no Python).
+```
+Act as a senior video automation engineer. Clip <URL> into <N> vertical 9:16 shorts
+using only yt-dlp + ffmpeg (+ faster-whisper if available). Follow these rules:
+1. Find moments: loudness peaks spread across the whole video (and transcript
+   highlights if you can transcribe). Each clip 25-40 s, starting a few seconds before the
+   peak.
+2. A/V sync: render with -vf "setpts=PTS-STARTPTS" and
+   -af "asetpts=PTS-STARTPTS,aresample=async=1:first_pts=0"; verify with ffprobe that
+   video and audio both start at 0.
+3. Layout 1080x1920: dark blurred gameplay background (boxblur, brightness -0.15),
+   facecam crop 620x400 centred at the top, gameplay cropped to 3:4 and scaled to
+   1080x1440 below it. No black bars.
+4. Captions: word-by-word ASS, Impact/bold, UPPERCASE, ~72 px, white with a heavy black
+   outline. The spoken word turns yellow (#FFE500), colour only so the line doesn't
+   jitter. Place them just below the facecam seam (~y=825).
+5. Encode with h264_nvenc / h264_qsv if available, else libx264 veryfast. Loudness
+   -14 LUFS.
+6. Delete all temporary files and the downloaded source afterwards, leaving only the
+   final .mp4 files.
+```
+
+### 12. Clean everything up
+```
+Read prompt.md. Free disk space from Prime Clips: run `primeclips clean` (downloaded
+VODs + leftover buffers). Show me how much space is used in data/clips first and ask
+before running `primeclips clean --all`.
+```
+
+### 13. Before you open a pull request
 ```
 Read prompt.md. Review my changes (git diff) against the rules in prompt.md. Check:
 stream-copy cutting preserved, renders still go through Worker, new subprocesses

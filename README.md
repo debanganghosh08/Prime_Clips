@@ -15,39 +15,40 @@
 
 ### ⭐ [Star the repo](https://github.com/debanganghosh08/Prime_Clips) so other clippers can find it
 
-<br>
-
-<img src="docs/assets/dashboard.png" alt="Prime Clips dashboard" width="900">
-
-<sub>Real screenshot: a live session on a test stream. The hype meter catches an audio spike and an auto clip is being cut in real time.</sub>
-
 </div>
-
----
 
 ## 🎬 Real output
 
 One command, a 35-minute stream in, ready-to-post shorts out:
 
 ```bash
-primeclips vod https://youtu.be/kR8bhkVAgBY --top 4
+primeclips vod https://youtu.be/kR8bhkVAgBY --top 10 --layout streamer --captions --delete-source
 ```
 
 <table>
 <tr>
 <td align="center" width="34%">
-<img src="docs/assets/demo.gif" alt="5-second demo of a Prime Clips gaming-layout short" width="260"><br>
-<sub>🎮 <code>gaming</code> layout · <a href="docs/assets/demo.mp4">▶️ watch with sound</a></sub>
+<img src="docs/assets/demo.gif" alt="5-second demo of a Prime Clips short with karaoke captions" width="260"><br>
+<sub>🎮 <code>streamer</code> layout + karaoke captions · <a href="docs/assets/demo.mp4">▶️ watch with sound</a></sub>
 </td>
 <td align="center">
-<img src="docs/assets/real-clips.jpg" alt="Frames from four clips Prime Clips cut automatically" width="560"><br>
-<sub>4 moments detected automatically (hype scores 80-82), each rendered as a 30 s 9:16 short.<br>
-<code>gaming</code> and <code>vertical-blur</code> layouts · 30 s clip rendered in ~7 s on an Intel iGPU (QSV)</sub>
+<img src="docs/assets/real-clips.jpg" alt="Thumbnails of the 10 clips Prime Clips cut automatically" width="560"><br>
+<sub><b>10 moments detected automatically</b>, spread across the whole stream (2:07 → 33:31), each a 32 s 9:16 short with captions.<br>
+Downloaded, clipped and rendered on a laptop; the 700 MB source was deleted automatically afterwards.<br>
+👉 <a href="examples/clips"><b>Watch all 10 clips</b></a></sub>
 </td>
 </tr>
 </table>
 
 <sub>Source: <a href="https://youtu.be/kR8bhkVAgBY">iShowSpeed's First Time Playing GTA 6! (SpeedUniverse)</a>, used to demo the clipping pipeline.</sub>
+
+<div align="center">
+
+<img src="docs/assets/dashboard.png" alt="Prime Clips dashboard" width="900">
+
+<sub>The dashboard: a live session with the hype meter catching a spike while an auto clip is cut in real time.</sub>
+
+</div>
 
 ---
 
@@ -70,9 +71,10 @@ Prime Clips sits on the live stream with a replay buffer, so the clip already ex
 | ⏪ | **Replay buffer** | ffmpeg stream-copies the live stream into ~2 s segments and keeps a rolling window (10 min by default). Cutting is a stream copy, no re-encode. |
 | 🔥 | **Hype detector** | Fuses audio loudness, chat message rate and hype words/emotes (plus viewers typing "clip") into a 0-100 score, relative to that stream's own baseline. |
 | ⚡ | **CLIP NOW** | Dashboard button, the **C** hotkey, and `POST /api/clip` for a Stream Deck or any hotkey tool. |
-| 📱 | **4 layouts** | `vertical-blur`, `crop`, `gaming` (facecam on top, gameplay below), `landscape`. |
+| 📱 | **5 layouts** | `vertical-blur`, `streamer` (facecam on top + 3:4 gameplay over a blurred backdrop), `gaming` (edge-to-edge stack), `crop`, `landscape`. |
 | 🎮 | **GPU encoders** | Auto-detects NVENC / QSV / AMF (and VideoToolbox on macOS), falls back to x264. Child processes run at low priority. |
-| 💬 | **Captions** | Word-by-word burned-in captions via faster-whisper (optional, off by default). |
+| 💬 | **Karaoke captions** | Word-by-word, bold UPPERCASE, active word in electric yellow, placed per layout just below the facecam (faster-whisper, optional). |
+| 🔊 | **Sync & loudness** | Every render resets audio/video timestamps to zero (no drift) and normalises to -14 LUFS like Shorts/TikTok. |
 | 🤖 | **AI titles** | Any OpenAI-compatible LLM: Ollama, OpenRouter, Gemini, and so on. Optional. |
 | 📣 | **Discord webhook** | Ping the finished clip to your phone or team, optionally automatically. |
 | 📺 | **YouTube Shorts upload** | 🧪 *Experimental, untested.* |
@@ -80,9 +82,9 @@ Prime Clips sits on the live stream with a replay buffer, so the clip already ex
 | 🖥️ | **Terminal mode** | `primeclips live <url>`, press Enter to clip. |
 | 🐳 | **Docker** | `docker compose up`. |
 
-> ✅ **Tested end-to-end:** Twitch live ingest via streamlink + Twitch chat, YouTube VOD download with browser cookies, local file input, replay buffer, auto and manual clips, the `vertical-blur` / `crop` / `gaming` / `landscape` layouts, GPU encoding (Intel QSV), VOD mode, terminal mode and the dashboard.
+> ✅ **Tested end-to-end:** Twitch live ingest via streamlink + Twitch chat, YouTube VOD download with browser cookies, burned-in karaoke captions, local file input, replay buffer, auto and manual clips, all 5 layouts, GPU encoding (Intel QSV), VOD mode, terminal mode and the dashboard.
 >
-> 🧪 **Not tested yet (experimental):** YouTube *live* ingest + chat, Kick, burned-in captions, AI titles, LLM moment picking (VOD `--ai`), Discord webhook, YouTube upload and Docker. Issues and PRs are very welcome!
+> 🧪 **Not tested yet (experimental):** YouTube *live* ingest + chat, Kick, AI titles, LLM moment picking (VOD `--ai`), Discord webhook, YouTube upload and Docker. Issues and PRs are very welcome!
 
 Chat signal support today: **Twitch** (anonymous IRC, no account or API key) and **YouTube** (experimental, needs the `youtube-chat` extra). Other platforms fall back to audio-only detection.
 
@@ -124,14 +126,15 @@ The pre/post window is deliberate: chat reacts a few seconds *after* the moment,
 ## 🖼️ Layouts
 
 <div align="center">
-<img src="docs/assets/real-clips.jpg" alt="gaming and vertical-blur layouts rendered by Prime Clips" width="720">
+<img src="docs/assets/layouts.jpg" alt="gaming and vertical-blur layouts rendered by Prime Clips" width="720">
 </div>
 
-Real frames from the demo run above: **gaming** (1st and 3rd) and **vertical-blur** (2nd and 4th).
+Real frames rendered by Prime Clips: **gaming** (1st and 3rd) and **vertical-blur** (2nd and 4th). The **streamer** layout is the one in the 🎬 Real output demo above.
 
 | Layout | Use it for |
 |---|---|
 | `vertical-blur` (default) | Full frame centred over a blurred copy of itself. Safe for anything. |
+| `streamer` | Facecam centred on top, gameplay cropped to 3:4 below it, over a dark blurred backdrop. Set `PRIMECLIPS_FACECAM`. |
 | `crop` | Hard centre crop to 9:16. Action or a face in the middle. |
 | `gaming` | Facecam on top, gameplay below. Set `PRIMECLIPS_FACECAM` to where the facecam sits. |
 | `landscape` | Keep 16:9 (only re-encoded if captions are burned in). |
@@ -211,9 +214,22 @@ Press **Enter** to clip the last 30 s, type a number then **Enter** to clip the 
 ```bash
 primeclips vod https://www.twitch.tv/videos/123456789 --top 5
 primeclips vod ./stream.mp4 --top 3 --layout gaming --captions
+primeclips vod https://youtu.be/<id> --top 10 --layout streamer --captions --delete-source
 ```
 
-Finds the loudest moments with a rolling local baseline. Flags: `--top`, `--layout`, `--captions`, `--min-len`, `--max-len`, and `--ai` (🧪 experimental: LLM picks moments from a transcript, needs an LLM configured and faster-whisper).
+Finds the hype moments with a rolling local loudness baseline, **spread across the whole stream**, so 10 clips means 10 different sections. Flags: `--top`, `--layout`, `--captions`, `--min-len`, `--max-len`, `--delete-source`, and `--ai` (🧪 experimental: an LLM picks moments from the transcript using a hook / engagement / value / shareability rubric; needs an LLM and faster-whisper).
+
+### 🧹 Downloads & cleanup
+
+When you clip a VOD, Prime Clips **downloads the source video** to `data/downloads/` (a 35-min stream at 720p is about 700 MB) and writes clips to `data/clips/`. Remove what you don't need:
+
+```bash
+primeclips vod <url> --delete-source   # delete the download as soon as the clips are cut
+primeclips clean                       # delete all downloads + leftover buffers (keeps clips)
+primeclips clean --all                 # also delete every clip
+```
+
+Using an AI agent? One prompt does it: *"Read prompt.md and clean up Prime Clips' downloads"* (see prompt **12** in [prompt.md](prompt.md)).
 
 ### 🎛️ Stream Deck / hotkey
 
@@ -264,6 +280,8 @@ Everything is driven by `PRIMECLIPS_*` environment variables or a `.env` file in
 | `PRIMECLIPS_CHAT` | `true` | Read live chat |
 | `PRIMECLIPS_CAPTIONS` | `false` | Burn captions (needs faster-whisper) |
 | `PRIMECLIPS_WHISPER_MODEL` | `base` | faster-whisper model name |
+| `PRIMECLIPS_WHISPER_DEVICE` | `auto` | `auto` tries the GPU and falls back to CPU if CUDA libraries are missing; or `cpu` / `cuda` |
+| `PRIMECLIPS_CAPTION_FONT` | `Impact` | Caption font (falls back automatically if not installed) |
 | `PRIMECLIPS_LLM_BASE_URL` | *(empty)* | Any OpenAI-compatible `/v1` endpoint |
 | `PRIMECLIPS_LLM_API_KEY` | *(empty)* | API key (not needed for local Ollama) |
 | `PRIMECLIPS_LLM_MODEL` | *(empty)* | Model name |
@@ -290,11 +308,29 @@ The full problem sheet is in **[docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md
 
 ---
 
-## 🤖 Use it with your AI assistant
+## 🤖 Use it with your AI agent: we ship a dedicated [prompt.md](prompt.md)
 
-Using Claude Code, Antigravity, Cursor or ChatGPT? **[prompt.md](prompt.md)** is a source-of-truth brief for the codebase (pipeline, file map, rules) plus ready-made prompts: setup, fix an error, unblock YouTube, tune the detector, add a layout, add a platform, add a publish target, make it lighter on your PC, and review a PR.
+Prime Clips is built to be driven by **Claude Code, Antigravity, Gemini, Cursor, Codex or ChatGPT**. **[prompt.md](prompt.md)** is written *for your AI agent*. It has:
 
-> *"Read `prompt.md` first and treat it as the source of truth for this repo."*
+- 🧭 **An agent playbook:** what to do when you hand it this repo's link, a live URL, a VOD, a local file or "open the web UI", plus every known edge case (no Python, no ffmpeg, YouTube bot wall, 429, no GPU, low disk, wrong facecam position).
+- 📘 **A source-of-truth brief:** pipeline, file map and the rules the code follows.
+- 🧰 **14 copy-paste prompts:** clone-and-run, clip this video, fix an error, unblock YouTube, tune the detector, add a layout / platform / upload target, make it lighter on your PC, clean up, a no-install fallback, and a PR review.
+
+> 💬 Just tell your agent: *"Clone https://github.com/debanganghosh08/Prime_Clips, read `prompt.md` and treat it as the source of truth."*
+
+---
+
+## 🧭 No setup? Other ways to clip
+
+Our motto: **everyone who wants to clip should be able to.** If you can't run Prime Clips on your machine yet, these work from the browser or your AI chat:
+
+| Way | How |
+|---|---|
+| 🤖 **Your AI agent, no install** | Paste prompt **11** from [prompt.md](prompt.md) into Claude Code / Antigravity / Gemini CLI. It runs the same pipeline (sync-safe cuts, facecam-on-top layout, karaoke captions) with plain ffmpeg. |
+| 🔌 **OpusClip in Claude** | Add the [OpusClip connector](https://help.opus.pro/api-reference/claude-connector) in Claude, then ask: *"[YouTube link] Make 5 viral vertical clips with captions and write an Instagram caption for each."* Uses OpusClip's processing minutes. |
+| 🌐 **Web clippers** | [OpusClip](https://www.opus.pro) or [ScaleReach](https://index.dodopayments.com/scalereach): paste a YouTube link, get captioned vertical clips (free tiers have limited minutes). |
+
+**💰 Getting paid for clips:** join a creator's clipping campaign on **Vyro** (the clipping marketplace backed by MrBeast) or [Whop](https://whop.com) Content Rewards, clip *their* videos, post, and submit the link. You're paid on approved, verified views, and every campaign sets its own rate.
 
 ---
 
@@ -302,7 +338,10 @@ Using Claude Code, Antigravity, Cursor or ChatGPT? **[prompt.md](prompt.md)** is
 
 - [ ] Kick chat
 - [ ] TikTok / Instagram upload
-- [ ] Face-tracking reframe
+- [ ] Sentence-aware clip edges (snap start/end to transcript sentences)
+- [ ] Face-tracking reframe for talking-head VODs (optional extra)
+- [ ] Skip frozen / BRB / "starting soon" screens automatically
+- [ ] Burned-in hook title for the first 3 seconds
 - [ ] Multi-stream dashboard grid
 - [ ] OBS plugin
 - [ ] Per-game event detectors (kill feed, wanted-level OCR)

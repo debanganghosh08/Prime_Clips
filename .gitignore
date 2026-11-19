@@ -23,6 +23,7 @@ data/
 *.mp4
 *.ts
 !docs/assets/*.mp4
+!examples/clips/*.mp4
 
 # Editor / tooling
 .claude/
