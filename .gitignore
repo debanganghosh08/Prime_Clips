@@ -29,3 +29,7 @@ data/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Browser cookies (never commit these)
+cookies.txt
+*cookies*.txt
