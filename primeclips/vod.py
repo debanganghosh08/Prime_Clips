@@ -21,19 +21,22 @@ if TYPE_CHECKING:
 log = logging.getLogger("primeclips.vod")
 
 
-def download(app: "App", url: str) -> Path:
+def download(app: "App", url: str) -> tuple[Path, str]:
+    """Returns (file, channel name as the site reports it)."""
     yd = ingest.ytdlp_cmd()
     if not yd:
         raise RuntimeError("pip install yt-dlp to download VODs")
-    out = subprocess.run(yd + [*app.cfg.ytdlp_auth, "-f", "bv*[height<=1080]+ba/b[height<=1080]/b", "--merge-output-format", "mp4",
+    h = app.cfg.vod_max_height
+    out = subprocess.run(yd + [*app.cfg.ytdlp_auth, "-f", f"bv*[height<={h}][vcodec^=avc1]+ba/bv*[height<={h}]+ba/b[height<={h}]/b", "--merge-output-format", "mp4",
                                "--no-warnings", "--no-playlist", "-o",
                                str(app.cfg.downloads_dir / "%(id)s.%(ext)s"),
-                               "--print", "after_move:filepath", url],
+                               "--print", "after_move:%(channel,uploader|)s\t%(filepath)s", url],
                          capture_output=True, timeout=6 * 3600, **popen_kwargs(app.cfg.low_priority))
-    paths = [l for l in out.stdout.decode(errors="replace").splitlines() if l.strip()]
-    if out.returncode != 0 or not paths or not Path(paths[-1]).exists():
+    lines = [l for l in out.stdout.decode("utf-8", errors="replace").splitlines() if "\t" in l]
+    channel, _, path = (lines[-1] if lines else "\t").partition("\t")
+    if out.returncode != 0 or not path or not Path(path).exists():
         raise RuntimeError("download failed: " + ingest.ytdlp_error(out.stderr))
-    return Path(paths[-1])
+    return Path(path), channel.strip()
 
 
 def loudness_moments(levels: list[float], n: int, length: float) -> list[tuple[float, float]]:
@@ -64,12 +67,13 @@ def run_vod(app: "App", job: dict, top_n: int = 5, layout: str | None = None, ca
     cfg = app.cfg
     url = job["url"]
     try:
+        platform, channel = ingest.detect(url)
         if ingest.is_local(url):
             path = Path(url).resolve()
         else:
             app.update_job(job, status="downloading", progress=0.05, message="downloading VOD")
-            path = download(app, url)
-        platform, channel = ingest.detect(url)
+            path, real_channel = download(app, url)
+            channel = real_channel or channel
         total = ffmpeg.duration(cfg.ffprobe, path)
         length = (min_len + max_len) / 2
 

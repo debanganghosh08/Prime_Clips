@@ -74,7 +74,8 @@ class Config:
     # YouTube sometimes answers "Sign in to confirm you're not a bot". Pass your own login:
     cookies_from_browser: str = field(default_factory=lambda: _env("COOKIES_FROM_BROWSER", ""))  # firefox|chrome|edge|brave
     cookies_file: str = field(default_factory=lambda: _env("COOKIES_FILE", ""))  # Netscape cookies.txt
-    whisper_model: str =field(default_factory=lambda: _env("WHISPER_MODEL", "base"))
+    vod_max_height: int = field(default_factory=lambda: int(_f("VOD_MAX_HEIGHT", 1080)))  # 720 = faster downloads
+    whisper_model: str = field(default_factory=lambda: _env("WHISPER_MODEL", "base"))
     llm_base_url: str = field(default_factory=lambda: _env("LLM_BASE_URL", ""))  # any OpenAI-compatible /v1
     llm_api_key: str = field(default_factory=lambda: _env("LLM_API_KEY", ""))
     llm_model: str = field(default_factory=lambda: _env("LLM_MODEL", ""))

@@ -22,6 +22,7 @@ data/
 # Media
 *.mp4
 *.ts
+!docs/assets/*.mp4
 
 # Editor / tooling
 .claude/

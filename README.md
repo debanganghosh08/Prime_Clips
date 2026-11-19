@@ -25,6 +25,32 @@
 
 ---
 
+## 🎬 Real output
+
+One command, a 35-minute stream in, ready-to-post shorts out:
+
+```bash
+primeclips vod https://youtu.be/kR8bhkVAgBY --top 4
+```
+
+<table>
+<tr>
+<td align="center" width="34%">
+<img src="docs/assets/demo.gif" alt="5-second demo of a Prime Clips gaming-layout short" width="260"><br>
+<sub>🎮 <code>gaming</code> layout · <a href="docs/assets/demo.mp4">▶️ watch with sound</a></sub>
+</td>
+<td align="center">
+<img src="docs/assets/real-clips.jpg" alt="Frames from four clips Prime Clips cut automatically" width="560"><br>
+<sub>4 moments detected automatically (hype scores 80-82), each rendered as a 30 s 9:16 short.<br>
+<code>gaming</code> and <code>vertical-blur</code> layouts · 30 s clip rendered in ~7 s on an Intel iGPU (QSV)</sub>
+</td>
+</tr>
+</table>
+
+<sub>Source: <a href="https://youtu.be/kR8bhkVAgBY">iShowSpeed's First Time Playing GTA 6! (SpeedUniverse)</a>, used to demo the clipping pipeline.</sub>
+
+---
+
 ## 🎯 Why
 
 When a mega-launch game drops (hello, GTA 6 hype), **every streamer plays it**, and every clipper races to post the viral moment first.
@@ -54,9 +80,9 @@ Prime Clips sits on the live stream with a replay buffer, so the clip already ex
 | 🖥️ | **Terminal mode** | `primeclips live <url>`, press Enter to clip. |
 | 🐳 | **Docker** | `docker compose up`. |
 
-> ✅ **Tested end-to-end:** Twitch live ingest via streamlink + Twitch chat, local file input, replay buffer, auto and manual clips, the `vertical-blur` / `crop` / `gaming` / `landscape` layouts, GPU encoding (Intel QSV), VOD mode, terminal mode and the dashboard.
+> ✅ **Tested end-to-end:** Twitch live ingest via streamlink + Twitch chat, YouTube VOD download with browser cookies, local file input, replay buffer, auto and manual clips, the `vertical-blur` / `crop` / `gaming` / `landscape` layouts, GPU encoding (Intel QSV), VOD mode, terminal mode and the dashboard.
 >
-> 🧪 **Not tested yet (experimental):** YouTube live ingest + chat, Kick, burned-in captions, AI titles, LLM moment picking (VOD `--ai`), Discord webhook, YouTube upload and Docker. Issues and PRs are very welcome!
+> 🧪 **Not tested yet (experimental):** YouTube *live* ingest + chat, Kick, burned-in captions, AI titles, LLM moment picking (VOD `--ai`), Discord webhook, YouTube upload and Docker. Issues and PRs are very welcome!
 
 Chat signal support today: **Twitch** (anonymous IRC, no account or API key) and **YouTube** (experimental, needs the `youtube-chat` extra). Other platforms fall back to audio-only detection.
 
@@ -98,10 +124,10 @@ The pre/post window is deliberate: chat reacts a few seconds *after* the moment,
 ## 🖼️ Layouts
 
 <div align="center">
-<img src="docs/assets/layouts.png" alt="Blur layout (left) and gaming layout (right), rendered by the pipeline from a synthetic test pattern" width="720">
+<img src="docs/assets/real-clips.jpg" alt="gaming and vertical-blur layouts rendered by Prime Clips" width="720">
 </div>
 
-Real frames rendered by the pipeline from a synthetic test pattern: **blur** layout on the left, **gaming** layout on the right.
+Real frames from the demo run above: **gaming** (1st and 3rd) and **vertical-blur** (2nd and 4th).
 
 | Layout | Use it for |
 |---|---|
@@ -206,7 +232,7 @@ It clips the most recent live session. Full route list in [docs/API.md](docs/API
 - 📉 **Lower the threshold** for chill streamers (their big moments are quieter in absolute terms, try `--threshold 55`).
 - 🚫 **Captions off for speed.** They cost CPU and seconds, and being first matters more than being pretty.
 - 📣 **Set a Discord webhook** (`PRIMECLIPS_DISCORD_WEBHOOK`, optionally `PRIMECLIPS_DISCORD_AUTO=true`) and post straight from your phone.
-- 🧑‍🚀 **Set `PRIMECLIPS_FACECAM`** (`x,y,w,h` as fractions of the frame, default `0,0,0.28,0.30`) so the `gaming` layout crops the right corner.
+- 🧑‍🚀 **Set `PRIMECLIPS_FACECAM`** (`x,y,w,h` as fractions of the frame, default `0,0,0.28,0.30`) so the `gaming` layout crops the right corner. The demo above used `PRIMECLIPS_FACECAM=0,0.415,0.205,0.235` (facecam on the left edge, mid-height).
 - ⌨️ **Keep a hotkey ready.** Manual clip plus auto-detect together beat either alone.
 
 ---
@@ -224,6 +250,7 @@ Everything is driven by `PRIMECLIPS_*` environment variables or a `.env` file in
 | `PRIMECLIPS_QUALITY` | `best` | Stream quality passed to streamlink / yt-dlp |
 | `PRIMECLIPS_COOKIES_FROM_BROWSER` | *(empty)* | `firefox` / `chrome` / `edge` / `brave`: lets yt-dlp use your YouTube login |
 | `PRIMECLIPS_COOKIES_FILE` | *(empty)* | Path to an exported `cookies.txt` (wins over the browser option) |
+| `PRIMECLIPS_VOD_MAX_HEIGHT` | `1080` | Max resolution for VOD downloads (`720` downloads ~2x faster) |
 | `PRIMECLIPS_ENCODER` | `auto` | `auto`, `libx264`, `h264_nvenc`, `h264_qsv`, `h264_amf` |
 | `PRIMECLIPS_THREADS` | `2` | Threads for x264 and captions |
 | `PRIMECLIPS_LOW_PRIORITY` | `true` | Run child processes at low priority |
@@ -253,20 +280,21 @@ AI titles need both `PRIMECLIPS_LLM_BASE_URL` and `PRIMECLIPS_LLM_MODEL`, for ex
 
 ## 🩺 Troubleshooting
 
-**YouTube says "Sign in to confirm you're not a bot"**
-YouTube sometimes blocks anonymous requests (it depends on your IP, region and the video). Twitch and Kick are not affected. Let yt-dlp use your own login:
+The full problem sheet is in **[docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)**. The three most common fixes:
 
-```bash
-# .env
-PRIMECLIPS_COOKIES_FROM_BROWSER=firefox
-```
+| Problem | Fix |
+|---|---|
+| YouTube: *"Sign in to confirm you're not a bot"* | Sign in to YouTube in **Firefox**, close it, then set `PRIMECLIPS_COOKIES_FROM_BROWSER=firefox` |
+| YouTube: *"Requested format is not available"* | `pip install -U "yt-dlp[default]"` and install **Node.js** (used automatically) |
+| `primeclips` / `yt-dlp` *"not recognized"* | Use `python -m primeclips ...` / `python -m yt_dlp ...`, or activate the venv |
 
-On Windows, Chrome and Edge lock their cookie store while the browser is open, so Firefox (or an exported `cookies.txt` via `PRIMECLIPS_COOKIES_FILE`) is the most reliable choice. With cookies set, YouTube goes through yt-dlp for both live and VOD mode.
+---
 
-**`yt-dlp` / `primeclips` is "not recognized"**
-pip's Scripts folder isn't on your PATH. Activate the venv from the Quick start, or call the modules directly: `python -m yt_dlp ...` and `python -m primeclips ...`.
+## 🤖 Use it with your AI assistant
 
-**Keep yt-dlp fresh.** YouTube changes often, so `pip install -U yt-dlp` fixes most download errors.
+Using Claude Code, Antigravity, Cursor or ChatGPT? **[prompt.md](prompt.md)** is a source-of-truth brief for the codebase (pipeline, file map, rules) plus ready-made prompts: setup, fix an error, unblock YouTube, tune the detector, add a layout, add a platform, add a publish target, make it lighter on your PC, and review a PR.
+
+> *"Read `prompt.md` first and treat it as the source of truth for this repo."*
 
 ---
 
@@ -281,34 +309,9 @@ pip's Scripts folder isn't on your PATH. Activate the venv from the Quick start,
 
 ---
 
-## 🙏 Standing on the shoulders of giants
+## 🧱 Built with
 
-Prime Clips was inspired by a lot of great open-source work. These are credited as **inspiration**, no code was copied from them.
-
-**Clipping and shorts tools**
-- [mutonby/openshorts](https://github.com/mutonby/openshorts)
-- [FujiwaraChoki/supoclip](https://github.com/FujiwaraChoki/supoclip)
-- [ColinGPT9/clips-studio](https://github.com/ColinGPT9/clips-studio)
-- [JeremySNR/cutawan](https://github.com/JeremySNR/cutawan)
-- [m-hoseyny/teek](https://github.com/m-hoseyny/teek)
-- [Anil-matcha/AI-Youtube-Shorts-Generator](https://github.com/Anil-matcha/AI-Youtube-Shorts-Generator)
-- [Shaarav4795/ClippedAI](https://github.com/Shaarav4795/ClippedAI)
-- [fralapo/clippyme](https://github.com/fralapo/clippyme)
-- [oktaydbk54/vibeclip](https://github.com/oktaydbk54/vibeclip)
-- [NaufalRizqullah/opensource-clipping](https://github.com/NaufalRizqullah/opensource-clipping)
-
-**Editing and recording**
-- [ClipsAI/clipsai](https://github.com/ClipsAI/clipsai)
-- [RayVentura/ShortGPT](https://github.com/RayVentura/ShortGPT)
-- [WyattBlue/auto-editor](https://github.com/WyattBlue/auto-editor)
-- [mifi/lossless-cut](https://github.com/mifi/lossless-cut)
-- [obsproject/obs-studio](https://github.com/obsproject/obs-studio)
-
-**Foundations Prime Clips runs on**
-- [streamlink/streamlink](https://github.com/streamlink/streamlink)
-- [yt-dlp/yt-dlp](https://github.com/yt-dlp/yt-dlp)
-- [SYSTRAN/faster-whisper](https://github.com/SYSTRAN/faster-whisper)
-- [FFmpeg](https://ffmpeg.org)
+[FFmpeg](https://ffmpeg.org) · [streamlink](https://github.com/streamlink/streamlink) · [yt-dlp](https://github.com/yt-dlp/yt-dlp) · [FastAPI](https://fastapi.tiangolo.com) · [faster-whisper](https://github.com/SYSTRAN/faster-whisper) (optional)
 
 ---
 
