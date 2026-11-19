@@ -71,7 +71,10 @@ class Config:
     encoder: str = field(default_factory=lambda: _env("ENCODER", "auto"))  # auto|libx264|h264_nvenc|h264_qsv|h264_amf
     threads: int = field(default_factory=lambda: int(_f("THREADS", 2)))
     low_priority: bool = field(default_factory=lambda: _b("LOW_PRIORITY", True))
-    whisper_model: str = field(default_factory=lambda: _env("WHISPER_MODEL", "base"))
+    # YouTube sometimes answers "Sign in to confirm you're not a bot". Pass your own login:
+    cookies_from_browser: str = field(default_factory=lambda: _env("COOKIES_FROM_BROWSER", ""))  # firefox|chrome|edge|brave
+    cookies_file: str = field(default_factory=lambda: _env("COOKIES_FILE", ""))  # Netscape cookies.txt
+    whisper_model: str =field(default_factory=lambda: _env("WHISPER_MODEL", "base"))
     llm_base_url: str = field(default_factory=lambda: _env("LLM_BASE_URL", ""))  # any OpenAI-compatible /v1
     llm_api_key: str = field(default_factory=lambda: _env("LLM_API_KEY", ""))
     llm_model: str = field(default_factory=lambda: _env("LLM_MODEL", ""))
@@ -90,6 +93,14 @@ class Config:
         captions=_b("CAPTIONS", False),
         cooldown=_f("COOLDOWN", 45.0),
     ))
+
+    @property
+    def ytdlp_auth(self) -> list[str]:
+        if self.cookies_file:
+            return ["--cookies", self.cookies_file]
+        if self.cookies_from_browser:
+            return ["--cookies-from-browser", self.cookies_from_browser]
+        return []
 
     @property
     def clips_dir(self) -> Path:

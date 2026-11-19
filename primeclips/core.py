@@ -191,7 +191,8 @@ class LiveSession:
 
     def _run(self) -> None:
         try:
-            source = ingest.resolve(self.url, self.app.cfg.stream_quality)
+            source = ingest.resolve(self.url, self.app.cfg.stream_quality,
+                                    ytdlp_auth=self.app.cfg.ytdlp_auth)
             self.buffer = ReplayBuffer(self.app.cfg, source, self.app.cfg.buffers_dir / self.id,
                                        on_segment=self._on_segment, on_exit=self._on_exit)
             self.buffer.start()

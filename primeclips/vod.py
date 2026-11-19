@@ -25,14 +25,17 @@ def download(app: "App", url: str) -> Path:
     yd = ingest.ytdlp_cmd()
     if not yd:
         raise RuntimeError("pip install yt-dlp to download VODs")
-    out = subprocess.run(yd + ["-f", "bv*[height<=1080]+ba/b[height<=1080]/b", "--merge-output-format", "mp4",
+    out = subprocess.run(yd + [*app.cfg.ytdlp_auth, "-f", "bv*[height<=1080]+ba/b[height<=1080]/b", "--merge-output-format", "mp4",
                                "--no-warnings", "--no-playlist", "-o",
                                str(app.cfg.downloads_dir / "%(id)s.%(ext)s"),
                                "--print", "after_move:filepath", url],
                          capture_output=True, timeout=6 * 3600, **popen_kwargs(app.cfg.low_priority))
     paths = [l for l in out.stdout.decode(errors="replace").splitlines() if l.strip()]
     if out.returncode != 0 or not paths or not Path(paths[-1]).exists():
-        raise RuntimeError("download failed: " + out.stderr.decode(errors="replace").strip()[-300:])
+        err = out.stderr.decode(errors="replace").strip()[-300:]
+        if "not a bot" in err and not app.cfg.ytdlp_auth:
+            err += "  -> set PRIMECLIPS_COOKIES_FROM_BROWSER=firefox (or PRIMECLIPS_COOKIES_FILE) and retry"
+        raise RuntimeError("download failed: " + err)
     return Path(paths[-1])
 
 

@@ -71,7 +71,10 @@ def ytdlp_cmd() -> list[str] | None:
     return _module_cmd("yt-dlp", "yt_dlp")
 
 
-def resolve(url: str, quality: str = "best", realtime_file: bool = True) -> Source:
+def resolve(url: str, quality: str = "best", realtime_file: bool = True,
+            ytdlp_auth: list[str] | None = None) -> Source:
+    """`ytdlp_auth` = yt-dlp cookie args; when set, YouTube goes through yt-dlp (which can
+    use your login) instead of streamlink."""
     url = url.strip()
     platform, channel = detect(url)
     src = Source(url=url, platform=platform, channel=channel)
@@ -88,7 +91,7 @@ def resolve(url: str, quality: str = "best", realtime_file: bool = True) -> Sour
         return src
 
     sl = streamlink_cmd()
-    if sl and platform in ("twitch", "kick", "youtube"):
+    if sl and (platform in ("twitch", "kick") or (platform == "youtube" and not ytdlp_auth)):
         extra = ["--twitch-low-latency"] if platform == "twitch" else []
         src.upstream = sl + ["--stdout", "--loglevel", "warning", "--hls-live-edge", "2",
                              *extra, url, f"{quality},best"]
@@ -98,12 +101,14 @@ def resolve(url: str, quality: str = "best", realtime_file: bool = True) -> Sour
     yd = ytdlp_cmd()
     if yd:
         fmt = "best[height<=1080]/best" if quality == "best" else quality
-        out = subprocess.run(yd + ["-g", "-f", fmt, "--no-warnings", url], capture_output=True,
+        out = subprocess.run(yd + [*(ytdlp_auth or []), "-g", "-f", fmt, "--no-warnings", url], capture_output=True,
                              timeout=60, **popen_kwargs(False))
         lines = [l for l in out.stdout.decode(errors="replace").splitlines() if l.startswith("http")]
         if not lines:
             err = out.stderr.decode(errors="replace").strip().splitlines()[-1:] or ["no stream URL"]
-            raise RuntimeError(f"yt-dlp could not resolve the stream: {err[0]}")
+            hint = (" (set PRIMECLIPS_COOKIES_FROM_BROWSER=firefox or PRIMECLIPS_COOKIES_FILE)"
+                    if "not a bot" in err[0] or "Sign in" in err[0] else "")
+            raise RuntimeError(f"yt-dlp could not resolve the stream: {err[0]}{hint}")
         src.input_args = []
         for line in lines[:2]:  # 1 muxed URL, or separate video + audio
             src.input_args += ["-i", line]

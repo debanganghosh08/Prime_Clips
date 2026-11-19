@@ -222,6 +222,8 @@ Everything is driven by `PRIMECLIPS_*` environment variables or a `.env` file in
 | `PRIMECLIPS_SEGMENT_SECONDS` | `2.0` | Replay buffer segment length |
 | `PRIMECLIPS_BUFFER_MINUTES` | `10.0` | Rolling replay buffer length |
 | `PRIMECLIPS_QUALITY` | `best` | Stream quality passed to streamlink / yt-dlp |
+| `PRIMECLIPS_COOKIES_FROM_BROWSER` | *(empty)* | `firefox` / `chrome` / `edge` / `brave`: lets yt-dlp use your YouTube login |
+| `PRIMECLIPS_COOKIES_FILE` | *(empty)* | Path to an exported `cookies.txt` (wins over the browser option) |
 | `PRIMECLIPS_ENCODER` | `auto` | `auto`, `libx264`, `h264_nvenc`, `h264_qsv`, `h264_amf` |
 | `PRIMECLIPS_THREADS` | `2` | Threads for x264 and captions |
 | `PRIMECLIPS_LOW_PRIORITY` | `true` | Run child processes at low priority |
@@ -246,6 +248,25 @@ Everything is driven by `PRIMECLIPS_*` environment variables or a `.env` file in
 | `PRIMECLIPS_YOUTUBE_PRIVACY` | `public` | Privacy status for YouTube uploads (🧪 experimental) |
 
 AI titles need both `PRIMECLIPS_LLM_BASE_URL` and `PRIMECLIPS_LLM_MODEL`, for example Ollama at `http://localhost:11434/v1`.
+
+---
+
+## 🩺 Troubleshooting
+
+**YouTube says "Sign in to confirm you're not a bot"**
+YouTube sometimes blocks anonymous requests (it depends on your IP, region and the video). Twitch and Kick are not affected. Let yt-dlp use your own login:
+
+```bash
+# .env
+PRIMECLIPS_COOKIES_FROM_BROWSER=firefox
+```
+
+On Windows, Chrome and Edge lock their cookie store while the browser is open, so Firefox (or an exported `cookies.txt` via `PRIMECLIPS_COOKIES_FILE`) is the most reliable choice. With cookies set, YouTube goes through yt-dlp for both live and VOD mode.
+
+**`yt-dlp` / `primeclips` is "not recognized"**
+pip's Scripts folder isn't on your PATH. Activate the venv from the Quick start, or call the modules directly: `python -m yt_dlp ...` and `python -m primeclips ...`.
+
+**Keep yt-dlp fresh.** YouTube changes often, so `pip install -U yt-dlp` fixes most download errors.
 
 ---
 
