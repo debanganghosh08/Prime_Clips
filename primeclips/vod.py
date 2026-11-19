@@ -32,10 +32,7 @@ def download(app: "App", url: str) -> Path:
                          capture_output=True, timeout=6 * 3600, **popen_kwargs(app.cfg.low_priority))
     paths = [l for l in out.stdout.decode(errors="replace").splitlines() if l.strip()]
     if out.returncode != 0 or not paths or not Path(paths[-1]).exists():
-        err = out.stderr.decode(errors="replace").strip()[-300:]
-        if "not a bot" in err and not app.cfg.ytdlp_auth:
-            err += "  -> set PRIMECLIPS_COOKIES_FROM_BROWSER=firefox (or PRIMECLIPS_COOKIES_FILE) and retry"
-        raise RuntimeError("download failed: " + err)
+        raise RuntimeError("download failed: " + ingest.ytdlp_error(out.stderr))
     return Path(paths[-1])
 
 

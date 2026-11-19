@@ -11,7 +11,7 @@ license = { text = "MIT" }
 authors = [{ name = "Debangan Ghosh" }]
 requires-python = ">=3.10"
 keywords = ["clipping", "twitch", "youtube", "kick", "shorts", "streaming", "ffmpeg", "highlights"]
-dependencies = ["fastapi>=0.110", "uvicorn>=0.29", "streamlink>=6.0", "yt-dlp>=2024.1.0"]
+dependencies = ["fastapi>=0.110", "uvicorn>=0.29", "streamlink>=6.0", "yt-dlp>=2025.11.12"]
 
 [project.optional-dependencies]
 captions = ["faster-whisper>=1.0"]

@@ -1,7 +1,7 @@
 fastapi>=0.110
 uvicorn>=0.29
 streamlink>=6.0
-yt-dlp>=2024.1.0
+yt-dlp>=2025.11.12
 # optional extras (uncomment what you want)
 # faster-whisper>=1.0            # word-by-word captions
 # chat-downloader>=0.2.8         # YouTube live chat signal

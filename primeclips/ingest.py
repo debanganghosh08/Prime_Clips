@@ -68,7 +68,23 @@ def streamlink_cmd() -> list[str] | None:
 
 
 def ytdlp_cmd() -> list[str] | None:
-    return _module_cmd("yt-dlp", "yt_dlp")
+    """yt-dlp needs a JavaScript runtime for YouTube (deno by default). Most people
+    already have Node.js, so use it when deno is missing."""
+    cmd = _module_cmd("yt-dlp", "yt_dlp")
+    if cmd and not which("deno") and which("node"):
+        cmd = cmd + ["--js-runtimes", "node"]
+    return cmd
+
+
+def ytdlp_error(stderr: bytes) -> str:
+    """The meaningful line of a yt-dlp failure (the ERROR line, not a traceback tail)."""
+    lines = stderr.decode(errors="replace").strip().splitlines()
+    errs = [l for l in lines if l.startswith("ERROR")]
+    msg = (errs or lines or ["unknown error"])[-1].replace("ERROR: ", "")
+    if "not a bot" in msg or "Sign in" in msg:
+        msg = msg.split(". Use --cookies")[0] + (". Log into YouTube in your browser and set "
+                                                 "PRIMECLIPS_COOKIES_FROM_BROWSER (or PRIMECLIPS_COOKIES_FILE)")
+    return msg
 
 
 def resolve(url: str, quality: str = "best", realtime_file: bool = True,
@@ -105,10 +121,7 @@ def resolve(url: str, quality: str = "best", realtime_file: bool = True,
                              timeout=60, **popen_kwargs(False))
         lines = [l for l in out.stdout.decode(errors="replace").splitlines() if l.startswith("http")]
         if not lines:
-            err = out.stderr.decode(errors="replace").strip().splitlines()[-1:] or ["no stream URL"]
-            hint = (" (set PRIMECLIPS_COOKIES_FROM_BROWSER=firefox or PRIMECLIPS_COOKIES_FILE)"
-                    if "not a bot" in err[0] or "Sign in" in err[0] else "")
-            raise RuntimeError(f"yt-dlp could not resolve the stream: {err[0]}{hint}")
+            raise RuntimeError(f"yt-dlp could not resolve the stream: {ytdlp_error(out.stderr)}")
         src.input_args = []
         for line in lines[:2]:  # 1 muxed URL, or separate video + audio
             src.input_args += ["-i", line]
